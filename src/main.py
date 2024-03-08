@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.append("../detr")
+sys.path.append("detr")
 from engine import evaluate, train_one_epoch
 from models import build_model
 import util.misc as utils
@@ -114,7 +114,7 @@ def get_data(args):
             include_eval=False,
             max_neg=0,
             make_coco=False,
-            image_extension=".jpg",
+            image_extension=".png",
             xml_fileset="train_filelist.txt",
             class_map=class_map)
         dataset_val = PDFTablesDataset(os.path.join(args.data_root_dir, "val"),
@@ -123,7 +123,7 @@ def get_data(args):
                                        max_size=args.val_max_size,
                                        include_eval=False,
                                        make_coco=True,
-                                       image_extension=".jpg",
+                                       image_extension=".png",
                                        xml_fileset="val_filelist.txt",
                                        class_map=class_map)
 
@@ -156,7 +156,7 @@ def get_data(args):
                                         max_size=args.test_max_size,
                                         make_coco=True,
                                         include_eval=True,
-                                        image_extension=".jpg",
+                                        image_extension=".png",
                                         xml_fileset="test_filelist.txt",
                                         class_map=class_map)
         sampler_test = torch.utils.data.SequentialSampler(dataset_test)
@@ -172,11 +172,11 @@ def get_data(args):
     elif args.mode == "grits" or args.mode == "grits-all":
         dataset_test = PDFTablesDataset(os.path.join(args.data_root_dir,
                                                      "test"),
-                                        RandomMaxResize(1000, 1000),
+                                        TD.RandomMaxResize(1000, 1000),
                                         include_original=True,
                                         max_size=args.max_test_size,
                                         make_coco=False,
-                                        image_extension=".jpg",
+                                        image_extension=".png",
                                         xml_fileset="test_filelist.txt",
                                         class_map=class_map)
         return dataset_test
@@ -362,6 +362,7 @@ def main():
 
     print("loading model")
     device = torch.device(args.device)
+    print("DEVICE = " + str(device))
     model, criterion, postprocessors = get_model(args, device)
 
     if args.mode == "train":
@@ -371,5 +372,43 @@ def main():
         eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
 
 
+def main_with_params(data_type: str, data_root_dir: str, config_file: str):
+    cmd_args = get_args().__dict__
+    config_args = json.load(open(cmd_args['config_file'], 'rb'))
+    for key, value in cmd_args.items():
+        if not key in config_args or not value is None:
+            config_args[key] = value
+    #config_args.update(cmd_args)
+    args = type('Args', (object,), config_args)
+    print(args.__dict__)
+    print('-' * 100)
+
+    # Check for debug mode
+    if args.mode == 'eval' and args.debug:
+        print("Running evaluation/inference in DEBUG mode, processing will take longer. Saving output to: {}.".format(args.debug_save_dir))
+        os.makedirs(args.debug_save_dir, exist_ok=True)
+
+    # fix the seed for reproducibility
+    seed = args.seed + utils.get_rank()
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    print("loading model")
+    device = torch.device(args.device)
+    print("DEVICE = " + str(device))
+    model, criterion, postprocessors = get_model(args, device)
+
+    if args.mode == "train":
+        train(args, model, criterion, postprocessors, device)
+    elif args.mode == "eval":
+        data_loader_test, dataset_test = get_data(args)
+
+        device = torch.device(args.device)
+        print("DEVICE = " + str(device))
+        eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
+
+
 if __name__ == "__main__":
+    print(torch.cuda.is_available())
     main()
