@@ -532,6 +532,7 @@ def visualize(args, target, pred_logits, pred_bboxes):
     fig.set_size_inches((15, 15))
     plt.axis('off')
     plt.savefig(bboxes_out_filepath, bbox_inches='tight', dpi=100)
+    img.show()
 
     if args.data_type == 'structure':
         img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".jpg", "_words.json"))

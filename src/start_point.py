@@ -36,9 +36,9 @@ def convert_xml_to_json(folder_path):
 
 
 if __name__ == "__main__":
-    # visualize_test_cases(resources_path_val + images_folder)
+    visualize_test_cases(resources_path_val + images_folder)
     # convert_xml_to_json(resources_path_train)
-    util.data_pipeline.create_dataset_item_v2(resources_path_val, images_folder, "000020.png")
+    # util.data_pipeline.create_dataset_item_v2(resources_path_val, images_folder, "000020.png")
     # util.annotation_utils.get_boxes_from_json(resources_path_val + "000020.json")
 
 
