@@ -4,9 +4,11 @@ import os.path
 import random
 import shutil
 import uuid
+import sys
 
 # import main
 # from table_datasets import read_pascal_voc
+sys.path.append(os.path.dirname("D:\\Work\\table-transformer\\detr\\util\\augmenter.py"))
 
 from PIL import Image, ImageFilter
 from tqdm import tqdm
@@ -19,7 +21,7 @@ import image_utils
 import iou_utils
 import textract_utils
 
-dataset_path = './dataset'
+dataset_path = './../resources'
 source_path = './docs/original_dataset'
 full_gt_path = './docs/full_ground_truth'
 structure_dataset_path = './docs/structure_dataset'
@@ -67,6 +69,24 @@ def create_dataset_item(img_path):
     image.save(new_img_path)
     shutil.copyfile(old_xml_path, new_xml_path)
 
+
+def create_dataset_item_v2(resources_path, img_folder, img_name):
+    name = img_name.split('.')
+    new_name = str(uuid.uuid4())
+    new_img_path = resources_path + img_folder + new_name + '.png'
+    new_annotation_path = resources_path + new_name + '.json'
+    old_img_path = resources_path + img_folder + img_name
+    old_annotation_path = resources_path + name[0] + '.json'
+    image = Image.open(old_img_path).convert("RGB")
+    image = random_blur(image, 40)
+    image.save(new_img_path)
+    with open(old_annotation_path) as json_obj:
+        json_str = json_obj.read()
+        structure = json.loads(json_str)
+        formatted_json_str = json.dumps(structure, indent=2)
+    with open(new_annotation_path, 'w') as json_file:
+        json_file.write(formatted_json_str)
+    # shutil.copyfile(old_annotation_path, new_annotation_path)
 
 def create_dataset_cropped_item(img_path):
     new_name = str(uuid.uuid4())

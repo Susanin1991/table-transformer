@@ -362,53 +362,14 @@ def main():
 
     print("loading model")
     device = torch.device(args.device)
-    print("DEVICE = " + str(device))
     model, criterion, postprocessors = get_model(args, device)
 
     if args.mode == "train":
         train(args, model, criterion, postprocessors, device)
     elif args.mode == "eval":
         data_loader_test, dataset_test = get_data(args)
-        eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
-
-
-def main_with_params(data_type: str, data_root_dir: str, config_file: str):
-    cmd_args = get_args().__dict__
-    config_args = json.load(open(cmd_args['config_file'], 'rb'))
-    for key, value in cmd_args.items():
-        if not key in config_args or not value is None:
-            config_args[key] = value
-    #config_args.update(cmd_args)
-    args = type('Args', (object,), config_args)
-    print(args.__dict__)
-    print('-' * 100)
-
-    # Check for debug mode
-    if args.mode == 'eval' and args.debug:
-        print("Running evaluation/inference in DEBUG mode, processing will take longer. Saving output to: {}.".format(args.debug_save_dir))
-        os.makedirs(args.debug_save_dir, exist_ok=True)
-
-    # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    print("loading model")
-    device = torch.device(args.device)
-    print("DEVICE = " + str(device))
-    model, criterion, postprocessors = get_model(args, device)
-
-    if args.mode == "train":
-        train(args, model, criterion, postprocessors, device)
-    elif args.mode == "eval":
-        data_loader_test, dataset_test = get_data(args)
-
-        device = torch.device(args.device)
-        print("DEVICE = " + str(device))
         eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
 
 
 if __name__ == "__main__":
-    print(torch.cuda.is_available())
     main()
