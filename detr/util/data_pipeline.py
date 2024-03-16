@@ -70,6 +70,33 @@ def create_dataset_item(img_path):
     shutil.copyfile(old_xml_path, new_xml_path)
 
 
+def create_dataset_item_v3(resources_path, images_folder, image):
+    new_name = str(uuid.uuid4())
+    image_no_extension = image.split('.')[0]
+    annotation = find_file_by_name(resources_path, image_no_extension)
+    extension = '.xml'
+    if annotation:
+        extension = '.' + annotation.split('.')[1]
+    new_img_path = os.path.join(resources_path, images_folder, new_name + '.png')
+    new_annotation_path = os.path.join(resources_path, new_name + extension)
+    old_annotation_path = os.path.join(resources_path, image_no_extension + extension)
+    old_img_path = os.path.join(resources_path, images_folder, image)
+    image = Image.open(old_img_path).convert("RGB")
+    image = random_blur(image, 40)
+    image.save(new_img_path)
+    shutil.copyfile(old_annotation_path, new_annotation_path)
+
+
+def find_file_by_name(folder_path, image_no_extension):
+    files = os.listdir(folder_path)
+
+    for file in files:
+        if file.startswith(image_no_extension):
+            return file
+
+    return None
+
+
 def create_dataset_item_v2(resources_path, img_folder, img_name):
     name = img_name.split('.')
     new_name = str(uuid.uuid4())

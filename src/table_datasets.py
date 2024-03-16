@@ -16,6 +16,8 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 
 # Project imports
+import util.image_utils
+
 sys.path.append("detr")
 import datasets.transforms as R
 
@@ -516,14 +518,15 @@ class PDFTablesDataset(torch.utils.data.Dataset):
 
 
         try:
-            with open(os.path.join(root, "..", xml_fileset), 'r') as file:
+            with open(os.path.join(root, xml_fileset), 'r') as file:
                 lines = file.readlines()
                 lines = [l.split('/')[-1] for l in lines]
         except:
             lines = os.listdir(root)
-        xml_page_ids = set([f.strip().replace(".xml", "") for f in lines if f.strip().endswith(".xml")])
+        annotation_page_ids_json = set([f.strip().replace(".json", "") for f in lines if f.strip().endswith(".json")])
+        annotation_page_ids_xml = set([f.strip().replace(".xml", "") for f in lines if f.strip().endswith(".xml")])
             
-        image_directory = os.path.join(root, "..", "images")
+        image_directory = os.path.join(root, "images")
         try:
             with open(os.path.join(image_directory, "filelist.txt"), 'r') as file:
                 lines = file.readlines()
@@ -531,7 +534,9 @@ class PDFTablesDataset(torch.utils.data.Dataset):
             lines = os.listdir(image_directory)
         png_page_ids = set([f.strip().replace(self.image_extension, "") for f in lines if f.strip().endswith(self.image_extension)])
         
-        self.page_ids = sorted(xml_page_ids.intersection(png_page_ids))
+        self.page_ids_json = sorted(annotation_page_ids_json.intersection(png_page_ids))
+        self.page_ids_xml = sorted(annotation_page_ids_xml.intersection(png_page_ids))
+        self.page_ids = self.page_ids_json + self.page_ids_xml
         if not max_size is None:
             random.shuffle(self.page_ids)
             self.page_ids = self.page_ids[:max_size]
@@ -540,13 +545,15 @@ class PDFTablesDataset(torch.utils.data.Dataset):
             
         if not max_neg is None and max_neg > 0:
             with open(os.path.join(negatives_root, "filelist.txt"), 'r') as file:
-                neg_xml_page_ids = set([f.strip().replace(".xml", "") for f in file.readlines() if f.strip().endswith(".xml")])
-                neg_xml_page_ids = neg_xml_page_ids.intersection(png_page_ids)
-                neg_xml_page_ids = sorted(neg_xml_page_ids.difference(set(self.page_ids)))
-                if len(neg_xml_page_ids) > max_neg:
-                    neg_xml_page_ids = neg_xml_page_ids[:max_neg]
-            self.page_ids += neg_xml_page_ids
-            self.types += [0 for idx in range(len(neg_xml_page_ids))]
+                neg_annotation_page_ids_json = set([f.strip().replace(".json", "") for f in file.readlines() if f.strip().endswith(".json")])
+                neg_annotation_page_ids_xml = set([f.strip().replace(".xml", "") for f in file.readlines() if f.strip().endswith(".xml")])
+                neg_annotation_page_ids = neg_annotation_page_ids_json.union(neg_annotation_page_ids_xml)
+                neg_annotation_page_ids = neg_annotation_page_ids.intersection(png_page_ids)
+                neg_annotation_page_ids = sorted(neg_annotation_page_ids.difference(set(self.page_ids)))
+                if len(neg_annotation_page_ids) > max_neg:
+                    neg_annotation_page_ids = neg_annotation_page_ids[:max_neg]
+            self.page_ids += neg_annotation_page_ids
+            self.types += [0 for idx in range(len(neg_annotation_page_ids))]
         
         self.has_mask = False
         
@@ -556,9 +563,11 @@ class PDFTablesDataset(torch.utils.data.Dataset):
             self.dataset['annotations'] = []
             ann_id = 0
             for image_id, page_id in enumerate(self.page_ids):
-                annot_path = os.path.join(self.root, page_id + ".xml")
-                bboxes, labels = read_pascal_voc(annot_path, class_map=self.class_map)
-
+                annot_path = os.path.join(self.root, page_id + ".json")
+                if os.path.exists(annot_path):
+                    bboxes, labels = util.image_utils.read_createml_json_file(annot_path, class_map=self.class_map)
+                else:
+                    bboxes, labels = read_pascal_voc(os.path.join(self.root, page_id + ".xml"), class_map=self.class_map)
                 # Reduce class set
                 keep_indices = [idx for idx, label in enumerate(labels) if label in self.class_set]
                 bboxes = [bboxes[idx] for idx in keep_indices]
@@ -613,14 +622,17 @@ class PDFTablesDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # load images ad masks
         page_id = self.page_ids[idx]
-        img_path = os.path.join(self.root, "..", "images", page_id + self.image_extension)
-        annot_path = os.path.join(self.root, page_id + ".xml")
-        
+        img_path = os.path.join(self.root, "images", page_id + self.image_extension)
+        annot_path = os.path.join(self.root, page_id + ".json")
+
         img = Image.open(img_path).convert("RGB")
         w, h = img.size
         
-        if self.types[idx] == 1:        
-            bboxes, labels = read_pascal_voc(annot_path, class_map=self.class_map)
+        if self.types[idx] == 1:
+            if os.path.exists(annot_path):
+                bboxes, labels = util.image_utils.read_createml_json_file(annot_path, class_map=self.class_map)
+            else:
+                bboxes, labels = read_pascal_voc(os.path.join(self.root, page_id + ".xml"), class_map=self.class_map)
 
             # Reduce class set
             keep_indices = [idx for idx, label in enumerate(labels) if label in self.class_set]

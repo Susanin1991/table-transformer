@@ -3,7 +3,7 @@ import os
 
 from PIL import Image, ImageDraw
 
-import data_pipeline
+from util import data_pipeline
 
 
 def read_createml_json_file(json_file: str, class_map=None):
