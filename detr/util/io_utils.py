@@ -173,3 +173,21 @@ def save_json(folder, img_name: str, json_dict):
 def save_json_full_path(path, json_dict):
     with open(path, 'w+') as out_file:
         json.dump(json_dict, out_file)
+
+
+def modify_and_save_xml(input_file, output_file, bboxes):
+    tree = ET.parse(input_file)
+    root = tree.getroot()
+
+    filename = os.path.basename(input_file)
+    path_element = root.find("path")
+    path_element.text = path_element.text.replace(filename, output_file)
+
+    for obj, bbox in zip(root.findall("object"), bboxes):
+        bndbox = obj.find("bndbox")
+        bndbox.find("xmin").text = str(bbox[0])
+        bndbox.find("xmax").text = str(bbox[1])
+        bndbox.find("ymin").text = str(bbox[2])
+        bndbox.find("ymax").text = str(bbox[3])
+
+    return tree

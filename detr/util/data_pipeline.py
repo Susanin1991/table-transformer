@@ -131,6 +131,38 @@ def create_dataset_cropped_item(img_path):
     shutil.copyfile(old_xml_path, new_xml_path)
 
 
+def create_augmented_detection_item_v2(resources_path, images_folder, image_name):
+    new_name = str(uuid.uuid4())
+    image_no_extension = image_name.split('.')[0]
+    annotation = find_file_by_name(resources_path, image_no_extension)
+    extension = '.xml'
+    if annotation:
+        extension = '.' + annotation.split('.')[1]
+    new_img_path = os.path.join(resources_path, images_folder, new_name + '.png')
+    new_annotation_path = os.path.join(resources_path, new_name + extension)
+    old_annotation_path = os.path.join(resources_path, image_no_extension + extension)
+    old_img_path = os.path.join(resources_path, images_folder, image_name)
+    image = Image.open(old_img_path).convert("RGB")
+    if extension == '.xml':
+        class_map = general_utils.get_class_map('detection')
+        bboxes, labels = io_utils.read_pascal_voc(old_annotation_path, class_map)
+    else:
+        bboxes, labels = image_utils.read_createml_json_file(old_annotation_path, general_utils.get_class_map('structure'))
+
+    t_bboxes = []
+    t_labels = []
+    for i in range(len(bboxes)):
+        if labels[i] == 0 or labels[i] == 'table':
+            t_bboxes.append(bboxes[i])
+            t_labels.append(labels[i])
+    image, t_bboxes, t_labels = augmenter.augment(image, t_bboxes, t_labels)
+    image.save(new_img_path)
+
+    tree = io_utils.modify_and_save_xml(old_annotation_path, new_annotation_path, t_bboxes)
+
+    tree.write(new_annotation_path, encoding="utf-8", xml_declaration=True)
+
+
 def create_augmented_detection_item(img_name):
     new_name = str(uuid.uuid4())
     new_img_path = os.path.join(dataset_path, 'images', f'{new_name}.png')
