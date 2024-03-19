@@ -186,8 +186,8 @@ def modify_and_save_xml(input_file, output_file, bboxes):
     for obj, bbox in zip(root.findall("object"), bboxes):
         bndbox = obj.find("bndbox")
         bndbox.find("xmin").text = str(bbox[0])
-        bndbox.find("xmax").text = str(bbox[1])
-        bndbox.find("ymin").text = str(bbox[2])
+        bndbox.find("ymin").text = str(bbox[1])
+        bndbox.find("xmax").text = str(bbox[2])
         bndbox.find("ymax").text = str(bbox[3])
 
     return tree
