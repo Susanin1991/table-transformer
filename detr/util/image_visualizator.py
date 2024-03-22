@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 import scripts.create_padded_dataset
-import util.annotation_utils
+import annotation_utils
 
 
 def image_visualize_xml(resources_path, images_folder, image_name, image_extension):

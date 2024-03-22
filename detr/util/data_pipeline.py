@@ -157,10 +157,12 @@ def create_augmented_detection_item_v2(resources_path, images_folder, image_name
             t_labels.append(labels[i])
     image, t_bboxes, t_labels = augmenter.augment(image, t_bboxes, t_labels)
     image.save(new_img_path)
-
-    tree = io_utils.modify_and_save_xml(old_annotation_path, new_annotation_path, t_bboxes)
-
-    tree.write(new_annotation_path, encoding="utf-8", xml_declaration=True)
+    if extension == '.xml':
+        tree = io_utils.modify_and_save_xml(old_annotation_path, new_annotation_path, t_bboxes)
+        tree.write(new_annotation_path, encoding="utf-8", xml_declaration=True)
+    else:
+        json_dict = io_utils.write_cml_json(image_no_extension + extension, t_bboxes, t_labels, general_utils.get_class_map('detection'))
+        io_utils.save_json_full_path(new_annotation_path, [json_dict])
 
 
 def create_augmented_detection_item(img_name):

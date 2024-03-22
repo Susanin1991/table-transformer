@@ -1,13 +1,16 @@
 import torch
 import os
-import util.data_pipeline
-import util.image_visualizator
-import util.annotation_utils
-import util.image_utils
+
+from detr import util
+import detr.util.image_visualizator
+import detr.util.data_pipeline
+import detr.util.annotation_utils
 
 images_folder = "images/"
-resources_path_train = "../resources/detection/train/"
-resources_path_val = "../resources/detection/val/"
+resources_path_train_detection = "../resources/detection/train/"
+resources_path_val_detection = "../resources/detection/val/"
+resources_path_train_recognition = "../resources/recognition/train/"
+resources_path_val_recognition = "../resources/recognition/val/"
 
 def check_cuda():
     print(torch.cuda.is_available())
@@ -27,7 +30,8 @@ def multiply_test_cases(resources_path, images_folder):
     files = os.listdir(resources_path + images_folder)
     image_files = [file for file in files if file.endswith(('.jpg', '.jpeg', '.png'))]
     for image in image_files:
-        util.data_pipeline.create_augmented_detection_item_v2(resources_path, images_folder, image)
+        for _ in range(2):
+            util.data_pipeline.create_augmented_detection_item_v2(resources_path, images_folder, image)
 
 
 def convert_xml_to_json(folder_path):
@@ -39,7 +43,7 @@ def convert_xml_to_json(folder_path):
 
 
 if __name__ == "__main__":
-    multiply_test_cases(resources_path_val, images_folder)
+    multiply_test_cases(resources_path_train_recognition, images_folder)
     # visualize_test_cases(resources_path_val + images_folder)
     # convert_xml_to_json(resources_path_train)
     # util.data_pipeline.create_dataset_item_v3(resources_path_train)
