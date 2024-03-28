@@ -606,9 +606,8 @@ def evaluate(args, model, criterion, postprocessors, data_loader, base_ds, devic
 
         outputs = model(samples)
 
-        if args.debug:
-            for target, pred_logits, pred_boxes in zip(targets, outputs['pred_logits'], outputs['pred_boxes']):
-                visualize(args, target, pred_logits, pred_boxes)
+        for target, pred_logits, pred_boxes in zip(targets, outputs['pred_logits'], outputs['pred_boxes']):
+            visualize(args, target, pred_logits, pred_boxes)
 
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict

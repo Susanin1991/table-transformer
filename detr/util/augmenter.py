@@ -55,9 +55,51 @@ def compression():
                               p=0.3)
 
 
+def perspective():
+    return A.Compose([
+        A.Perspective(scale=(0.01, 0.01), p=1)
+    ])
+
+
+def increase_image_size(image, increase_factor):
+    w, h = image.size
+    new_h, new_w = int(h * increase_factor), int(w * increase_factor)
+    top = (new_h - h) // 2
+    bottom = new_h - h - top
+    left = (new_w - w) // 2
+    right = new_w - w - left
+    return cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+
+
+def scale_lower(image: Image, bboxes: list):
+    image_np = np.array(image)
+    scale_factor = 0.5
+    resized_image_np = cv2.resize(image_np, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LINEAR)
+    scaled_bboxes = []
+    for bbox in bboxes:
+        scaled_bbox = [coord / image.size[0] for coord in bbox[:4]]
+        scaled_bboxes.append(scaled_bbox)
+
+    return resized_image_np, scaled_bboxes
+
+
+def augment_trapezoid(image: Image, bboxes: list, labels: list):
+    increase_image_size(image, 1.5)
+    num_img = np.array(image)
+
+    transform = A.Compose([perspective()],
+                          bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
+    augmented = transform(image=num_img, bboxes=bboxes, labels=labels)
+    bboxes = augmented['bboxes']
+    num_img = augmented['image']
+    labels = augmented['labels']
+    image = Image.fromarray(np.uint8(num_img))
+    return image, bboxes, labels
+
+
 def augment(image: Image, bboxes: list, labels: list):
     num_img = np.array(image)
-    transform = A.Compose([zoom(), shift(), rotate(), contrast(), blur(), noise(), compression()],
+    transform = A.Compose([zoom(), shift(), rotate(), contrast(), blur(), noise(), compression(), perspective()],
                           bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
     augmented = transform(image=num_img, bboxes=bboxes, labels=labels)
     bboxes = augmented['bboxes']

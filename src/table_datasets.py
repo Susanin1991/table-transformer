@@ -10,7 +10,7 @@ import itertools
 import math
 
 import PIL
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 import torch
 from torchvision import transforms
 from torchvision.transforms import functional as F

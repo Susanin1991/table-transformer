@@ -87,7 +87,8 @@ def create_dataset_item_v3(resources_path, images_folder, image):
     shutil.copyfile(old_annotation_path, new_annotation_path)
 
 
-def find_file_by_name(folder_path, image_no_extension):
+def find_file_by_name(resources_path, data_type_path, mode_path, image_no_extension):
+    folder_path = os.path.join(resources_path, data_type_path, mode_path)
     files = os.listdir(folder_path)
 
     for file in files:
@@ -131,28 +132,33 @@ def create_dataset_cropped_item(img_path):
     shutil.copyfile(old_xml_path, new_xml_path)
 
 
-def create_augmented_detection_item_v2(resources_path, images_folder, image_name):
+def create_augmented_detection_item_v2(resources_path, data_type_path, mode_path, images_folder, image_name):
     new_name = str(uuid.uuid4())
     image_no_extension = image_name.split('.')[0]
-    annotation = find_file_by_name(resources_path, image_no_extension)
+    annotation = find_file_by_name(resources_path, data_type_path, mode_path, image_no_extension)
     extension = '.xml'
     if annotation:
         extension = '.' + annotation.split('.')[1]
-    new_img_path = os.path.join(resources_path, images_folder, new_name + '.png')
-    new_annotation_path = os.path.join(resources_path, new_name + extension)
-    old_annotation_path = os.path.join(resources_path, image_no_extension + extension)
-    old_img_path = os.path.join(resources_path, images_folder, image_name)
+    new_img_path = os.path.join(resources_path, data_type_path, mode_path, images_folder, new_name + '.png')
+    new_annotation_path = os.path.join(resources_path, data_type_path, mode_path, new_name + extension)
+    old_annotation_path = os.path.join(resources_path, data_type_path, mode_path, image_no_extension + extension)
+    old_img_path = os.path.join(resources_path, data_type_path, mode_path, images_folder, image_name)
     image = Image.open(old_img_path).convert("RGB")
-    if extension == '.xml':
+
+    if data_type_path == "detection/":
         class_map = general_utils.get_class_map('detection')
+    else:
+        class_map = general_utils.get_class_map('structure')
+
+    if extension == '.xml':
         bboxes, labels = io_utils.read_pascal_voc(old_annotation_path, class_map)
     else:
-        bboxes, labels = image_utils.read_createml_json_file(old_annotation_path, general_utils.get_class_map('structure'))
+        bboxes, labels = image_utils.read_createml_json_file(old_annotation_path, class_map)
 
     t_bboxes = []
     t_labels = []
     for i in range(len(bboxes)):
-        if labels[i] == 0 or labels[i] == 'table':
+        if labels[i] == 0 or labels[i] == 5 or labels[i] == 'table':
             t_bboxes.append(bboxes[i])
             t_labels.append(labels[i])
     image, t_bboxes, t_labels = augmenter.augment(image, t_bboxes, t_labels)
@@ -161,7 +167,7 @@ def create_augmented_detection_item_v2(resources_path, images_folder, image_name
         tree = io_utils.modify_and_save_xml(old_annotation_path, new_annotation_path, t_bboxes)
         tree.write(new_annotation_path, encoding="utf-8", xml_declaration=True)
     else:
-        json_dict = io_utils.write_cml_json(image_no_extension + extension, t_bboxes, t_labels, general_utils.get_class_map('detection'))
+        json_dict = io_utils.write_cml_json(image_no_extension + extension, t_bboxes, t_labels, class_map)
         io_utils.save_json_full_path(new_annotation_path, [json_dict])
 
 

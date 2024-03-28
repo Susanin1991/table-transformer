@@ -178,11 +178,12 @@ def save_json_full_path(path, json_dict):
 def modify_and_save_xml(input_file, output_file, bboxes):
     tree = ET.parse(input_file)
     root = tree.getroot()
-
-    filename = os.path.basename(input_file)
+    new_path = os.path.abspath(output_file)
+    new_name = os.path.basename(output_file)
+    name_element = root.find("filename")
     path_element = root.find("path")
-    path_element.text = path_element.text.replace(filename, output_file)
-
+    path_element.text = new_path
+    name_element.text = new_name
     for obj, bbox in zip(root.findall("object"), bboxes):
         bndbox = obj.find("bndbox")
         bndbox.find("xmin").text = str(bbox[0])

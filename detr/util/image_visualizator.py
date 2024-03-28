@@ -18,6 +18,34 @@ def image_visualize_xml(resources_path, images_folder, image_name, image_extensi
     image.show()
 
 
+def image_visualize(image_path, bboxes):
+    image = Image.open(image_path)
+    draw = ImageDraw.Draw(image)
+    for bbox in bboxes:
+        xmin = bbox[0]
+        ymin = bbox[1]
+        xmax = bbox[0] + bbox[2]
+        ymax = bbox[1] + bbox[3]
+        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=3)
+    image.show()
+
+
+def image_visualize_v2(image_path, bboxes):
+    image = Image.open(image_path)
+    draw = ImageDraw.Draw(image)
+    for bbox in bboxes:
+        xmin = bbox[0]
+        ymin = bbox[1]
+        xmax = bbox[0] + bbox[2]
+        ymax = bbox[1] + bbox[3]
+        # xmin = bbox[0]
+        # ymin = bbox[1]
+        # xmax = bbox[2]
+        # ymax = bbox[3]
+        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=3)
+    image.show()
+
+
 def image_visualize_json(resources_path, images_folder, image_name, image_extension):
     image = Image.open(resources_path + images_folder + image_name + "." + image_extension)
     draw = ImageDraw.Draw(image)

@@ -150,7 +150,7 @@ def get_data(args):
     elif args.mode == "eval":
 
         dataset_test = PDFTablesDataset(os.path.join(args.data_root_dir,
-                                                     "test"),
+                                                     "val"),
                                         get_transform(args.data_type, "val"),
                                         do_crop=False,
                                         max_size=args.test_max_size,
