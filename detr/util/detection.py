@@ -19,6 +19,14 @@ DATA_DIR = './dataset'
 PADDING = 10
 
 
+det_config_path = os.path.abspath('../../src/structure_config.json')
+det_model_path = os.path.abspath('../../resources/detection/output/model_20.pth')
+str_config_path = os.path.abspath('../../src/structure_config.json')
+str_model_path = os.path.abspath('../../resources/structure/output/model_20.pth')
+det_model_path_base = os.path.abspath('../../resources/detection/output/base.pth')
+str_model_path_base = os.path.abspath('../../resources/structure/output/base.pth')
+
+
 def draw_image(image, items):
     draw = ImageDraw.Draw(image)
     for obj in items:
@@ -38,11 +46,11 @@ def draw_image_with_bbox(image, bboxes, color):
     image.show()
 
 
-pipe = inference.TableExtractionPipeline(det_config_path='table-transformer/src/detection_config.json',
-                                         det_model_path='table-transformer/docs/detection_model_20.pth',
+pipe = inference.TableExtractionPipeline(det_config_path=det_config_path,
+                                         det_model_path=det_model_path_base,
                                          det_device='cuda',
-                                         str_config_path='table-transformer/src/structure_config.json',
-                                         str_model_path='table-transformer/docs/structure_model_20.pth',
+                                         str_config_path=str_config_path,
+                                         str_model_path=str_model_path_base,
                                          str_device='cuda')
 
 
@@ -406,5 +414,5 @@ if __name__ == '__main__':
     # show_detected_blanks('000001.png', './docs/original_dataset')
     # extract_table_structure_with_metrics()
     # get_predictions()
-    show_prediction('f9491c5d-e627-4ddd-9f18-43ea82696feb.png')
+    show_prediction('D:/Work/table-transformer/resources/structure/val/images/000001_0.png')
     # get_metrics_from_file()

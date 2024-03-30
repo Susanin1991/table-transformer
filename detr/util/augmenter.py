@@ -57,7 +57,7 @@ def compression():
 
 def perspective():
     return A.Compose([
-        A.Perspective(scale=(0.01, 0.01), p=1)
+        A.Perspective(scale=(0.1, 0.1), p=1)
     ])
 
 

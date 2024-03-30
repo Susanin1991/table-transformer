@@ -535,7 +535,10 @@ def visualize(args, target, pred_logits, pred_bboxes):
     img.show()
 
     if args.data_type == 'structure':
-        img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".jpg", "_words.json"))
+        if img_filename.endswith('jpg'):
+            img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".jpg", "_words.json"))
+        else:
+            img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".png", "_words.json"))
         cells_out_filename = img_filename.replace(".jpg", "_cells.jpg")
         cells_out_filepath = os.path.join(args.debug_save_dir, cells_out_filename)
 

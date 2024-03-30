@@ -1,4 +1,7 @@
 from PIL import Image, ImageDraw
+
+import general_utils
+import image_utils
 import scripts.create_padded_dataset
 import annotation_utils
 
@@ -6,6 +9,8 @@ import annotation_utils
 def image_visualize_xml(resources_path, images_folder, image_name, image_extension):
     image = Image.open(resources_path + images_folder + image_name + "." + image_extension)
     draw = ImageDraw.Draw(image)
+
+    # annotation = find_file_by_name(resources_path, image_no_extension)
     bboxes, labels, filename, width, height, database = scripts.create_padded_dataset.read_pascal_voc(resources_path + image_name + ".xml")
     # bboxes2 = util.annotation_utils.get_boxes_from_json(resources_path + image_name + ".json")
     # util.annotation_reader.read_xml(resources_path + image_name + ".xml")
@@ -49,7 +54,9 @@ def image_visualize_v2(image_path, bboxes):
 def image_visualize_json(resources_path, images_folder, image_name, image_extension):
     image = Image.open(resources_path + images_folder + image_name + "." + image_extension)
     draw = ImageDraw.Draw(image)
-    bboxes, labels, filename, width, height, database = scripts.create_padded_dataset.read_pascal_voc(resources_path + image_name + ".json")
+    class_map = general_utils.get_class_map('structure')
+    bboxes, labels = image_utils.read_createml_json_file(resources_path + image_name + ".json", class_map)
+    # bboxes, labels, filename, width, height, database = scripts.create_padded_dataset.read_pascal_voc(resources_path + image_name + ".json")
     # util.annotation_reader.read_xml(resources_path + image_name + ".xml")
     for bbox in bboxes:
         xmin = bbox[0]

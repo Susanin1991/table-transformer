@@ -49,44 +49,6 @@ def is_train_item():
     return False
 
 
-def random_blur(image, max_blur):
-    image = image.filter(filter=ImageFilter.GaussianBlur(radius=random.randint(0, max_blur) * 0.1))
-    return image
-
-
-def create_dataset_item(img_path):
-    new_name = str(uuid.uuid4())
-    new_img_path = os.path.join(dataset_path, 'images', new_name + '.png')
-    if is_train_item():
-        new_xml_path = os.path.join(dataset_path, 'train', new_name + '.xml')
-    else:
-        new_xml_path = os.path.join(dataset_path, 'val', new_name + '.xml')
-    old_img_path = os.path.join(source_path, img_path)
-    old_xml_name = img_path.split('.')[0]
-    old_xml_path = os.path.join(source_path, old_xml_name + '.xml')
-    image = Image.open(old_img_path).convert("RGB")
-    image = random_blur(image, 40)
-    image.save(new_img_path)
-    shutil.copyfile(old_xml_path, new_xml_path)
-
-
-def create_dataset_item_v3(resources_path, images_folder, image):
-    new_name = str(uuid.uuid4())
-    image_no_extension = image.split('.')[0]
-    annotation = find_file_by_name(resources_path, image_no_extension)
-    extension = '.xml'
-    if annotation:
-        extension = '.' + annotation.split('.')[1]
-    new_img_path = os.path.join(resources_path, images_folder, new_name + '.png')
-    new_annotation_path = os.path.join(resources_path, new_name + extension)
-    old_annotation_path = os.path.join(resources_path, image_no_extension + extension)
-    old_img_path = os.path.join(resources_path, images_folder, image)
-    image = Image.open(old_img_path).convert("RGB")
-    image = random_blur(image, 40)
-    image.save(new_img_path)
-    shutil.copyfile(old_annotation_path, new_annotation_path)
-
-
 def find_file_by_name(resources_path, data_type_path, mode_path, image_no_extension):
     folder_path = os.path.join(resources_path, data_type_path, mode_path)
     files = os.listdir(folder_path)
@@ -96,40 +58,6 @@ def find_file_by_name(resources_path, data_type_path, mode_path, image_no_extens
             return file
 
     return None
-
-
-def create_dataset_item_v2(resources_path, img_folder, img_name):
-    name = img_name.split('.')
-    new_name = str(uuid.uuid4())
-    new_img_path = resources_path + img_folder + new_name + '.png'
-    new_annotation_path = resources_path + new_name + '.json'
-    old_img_path = resources_path + img_folder + img_name
-    old_annotation_path = resources_path + name[0] + '.json'
-    image = Image.open(old_img_path).convert("RGB")
-    image = random_blur(image, 40)
-    image.save(new_img_path)
-    with open(old_annotation_path) as json_obj:
-        json_str = json_obj.read()
-        structure = json.loads(json_str)
-        formatted_json_str = json.dumps(structure, indent=2)
-    with open(new_annotation_path, 'w') as json_file:
-        json_file.write(formatted_json_str)
-    # shutil.copyfile(old_annotation_path, new_annotation_path)
-
-def create_dataset_cropped_item(img_path):
-    new_name = str(uuid.uuid4())
-    new_img_path = os.path.join(dataset_path, 'images', new_name + '.png')
-    if is_train_item():
-        new_xml_path = os.path.join(dataset_path, 'train', new_name + '.json')
-    else:
-        new_xml_path = os.path.join(dataset_path, 'val', new_name + '.json')
-    old_img_path = os.path.join(structure_error_dataset, img_path)
-    old_xml_name = img_path.split('.')[0]
-    old_xml_path = os.path.join(structure_error_dataset, old_xml_name + '.json')
-    image = Image.open(old_img_path).convert("RGB")
-    image = random_blur(image, 20)
-    image.save(new_img_path)
-    shutil.copyfile(old_xml_path, new_xml_path)
 
 
 def create_augmented_detection_item_v2(resources_path, data_type_path, mode_path, images_folder, image_name):
