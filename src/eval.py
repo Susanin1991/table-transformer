@@ -51,7 +51,7 @@ normalize = transforms.Compose([
 ])
 
 
-def objects_to_cells(bboxes, labels, scores, page_tokens, structure_class_names, structure_class_thresholds, structure_class_map):
+def objects_to_cells(bboxes, labels, scores, structure_class_names, structure_class_thresholds, structure_class_map):
     bboxes, scores, labels = postprocess.apply_class_thresholds(bboxes, labels, scores,
                                             structure_class_names,
                                             structure_class_thresholds)
@@ -61,19 +61,9 @@ def objects_to_cells(bboxes, labels, scores, page_tokens, structure_class_names,
         table_objects.append({'bbox': bbox, 'score': score, 'label': label})
         
     table = {'objects': table_objects, 'page_num': 0} 
-    
-    table_class_objects = [obj for obj in table_objects if obj['label'] == structure_class_map['table']]
-    if len(table_class_objects) > 1:
-        table_class_objects = sorted(table_class_objects, key=lambda x: x['score'], reverse=True)
-    try:
-        table_bbox = list(table_class_objects[0]['bbox'])
-    except:
-        table_bbox = (0,0,1000,1000)
-    
-    tokens_in_table = [token for token in page_tokens if postprocess.iob(token['bbox'], table_bbox) >= 0.5]
-    
+
     # Determine the table cell structure from the objects
-    table_structures, cells, confidence_score = postprocess.objects_to_cells(table, table_objects, tokens_in_table,
+    table_structures, cells, confidence_score = postprocess.objects_to_cells(table, table_objects,
                                                                     structure_class_names,
                                                                     structure_class_thresholds)
     
@@ -489,7 +479,8 @@ def visualize(args, target, pred_logits, pred_bboxes):
     img_filepath = target["img_path"]
     img_filename = img_filepath.split("/")[-1]
 
-    bboxes_out_filename = img_filename.replace(".jpg", "_bboxes.jpg")
+    bboxes_out_filename = img_filename.replace("val", "output")
+    bboxes_out_filename = bboxes_out_filename.replace(".png", "_bboxes.png")
     bboxes_out_filepath = os.path.join(args.debug_save_dir, bboxes_out_filename)
 
     img = Image.open(img_filepath)
@@ -532,21 +523,10 @@ def visualize(args, target, pred_logits, pred_bboxes):
     fig.set_size_inches((15, 15))
     plt.axis('off')
     plt.savefig(bboxes_out_filepath, bbox_inches='tight', dpi=100)
-    img.show()
 
     if args.data_type == 'structure':
-        if img_filename.endswith('jpg'):
-            img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".jpg", "_words.json"))
-        else:
-            img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".png", "_words.json"))
-        cells_out_filename = img_filename.replace(".jpg", "_cells.jpg")
-        cells_out_filepath = os.path.join(args.debug_save_dir, cells_out_filename)
 
-        with open(img_words_filepath, 'r') as f:
-            tokens = json.load(f)
-
-        _, pred_cells, _ = objects_to_cells(pred_bboxes, pred_labels, pred_scores,
-                                            tokens, structure_class_names,
+        _, pred_cells, _ = objects_to_cells(pred_bboxes, pred_labels, pred_scores, structure_class_names,
                                             structure_class_thresholds, structure_class_map)
 
         fig,ax = plt.subplots(1)
@@ -571,7 +551,6 @@ def visualize(args, target, pred_logits, pred_bboxes):
 
         fig.set_size_inches((15, 15))
         plt.axis('off')
-        plt.savefig(cells_out_filepath, bbox_inches='tight', dpi=100)
 
     plt.close('all')
 
@@ -640,18 +619,10 @@ def evaluate(args, model, criterion, postprocessors, data_loader, base_ds, devic
                 for k, v in target.items():
                     if not k == 'img_path':
                         target[k] = v.cpu()
-                img_filepath = target["img_path"]
-                img_filename = img_filepath.split("/")[-1]
-                img_words_filepath = os.path.join(args.table_words_dir, img_filename.replace(".jpg", "_words.json"))
-                target["img_words_path"] = img_words_filepath
+                target["img_words_path"] = ''
             targets_collection += targets
 
             if batch_num % args.eval_step == 0 or batch_num == num_batches:
-                arguments = zip(targets_collection, pred_logits_collection, pred_bboxes_collection,
-                                repeat(args.mode))
-                with multiprocessing.Pool(args.eval_pool_size) as pool:
-                    metrics = pool.starmap_async(eval_tsr_sample, arguments).get()
-                tsr_metrics += metrics
                 pred_logits_collection = []
                 pred_bboxes_collection = []
                 targets_collection = []

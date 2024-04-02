@@ -58,7 +58,7 @@ def iob(bbox1, bbox2):
     return 0
 
 
-def objects_to_cells(table, objects_in_table, tokens_in_table, class_map, class_thresholds):
+def objects_to_cells(table, objects_in_table, class_map, class_thresholds):
     """
     Process the bounding boxes produced by the table structure recognition model
     and the token/word/span bounding boxes into table cells.
@@ -67,7 +67,7 @@ def objects_to_cells(table, objects_in_table, tokens_in_table, class_map, class_
     uniquely slotted into the cells detected by the table model.
     """
 
-    table_structures = objects_to_table_structures(table, objects_in_table, tokens_in_table, class_map,
+    table_structures = objects_to_table_structures(table, objects_in_table, class_map,
                                                    class_thresholds)
 
     # Check for a valid table
@@ -75,12 +75,12 @@ def objects_to_cells(table, objects_in_table, tokens_in_table, class_map, class_
         cells = []#None
         confidence_score = 0
     else:
-        cells, confidence_score = table_structure_to_cells(table_structures, tokens_in_table, table['bbox'])
+        cells, confidence_score = table_structure_to_cells(table_structures, table['bbox'])
 
     return table_structures, cells, confidence_score
 
 
-def objects_to_table_structures(table_object, objects_in_table, tokens_in_table, class_names, class_thresholds):
+def objects_to_table_structures(table_object, objects_in_table, class_names, class_thresholds):
     """
     Process the bounding boxes produced by the table structure recognition model into
     a *consistent* set of table structures (rows, columns, supercells, headers).
@@ -114,10 +114,6 @@ def objects_to_table_structures(table_object, objects_in_table, tokens_in_table,
     for column in columns:
         column['page'] = page_num
 
-    #Refine table structures
-    rows = refine_rows(rows, tokens_in_table, class_thresholds['table row'])
-    columns = refine_columns(columns, tokens_in_table, class_thresholds['table column'])
-
     # Shrink table bbox to just the total height of the rows
     # and the total width of the columns
     row_rect = Rect()
@@ -139,7 +135,7 @@ def objects_to_table_structures(table_object, objects_in_table, tokens_in_table,
     table_structures['supercells'] = supercells
 
     if len(rows) > 0 and len(columns) > 1:
-        table_structures = refine_table_structures(table_object['bbox'], table_structures, tokens_in_table, class_thresholds)
+        table_structures = refine_table_structures(table_object['bbox'], table_structures, class_thresholds)
 
     return table_structures
 

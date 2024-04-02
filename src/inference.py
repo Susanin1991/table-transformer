@@ -697,8 +697,7 @@ class TableExtractionPipeline(object):
             print("Detection model initialized.")
 
             if not det_model_path is None:
-                self.det_model.load_state_dict(torch.load(det_model_path,
-                                                     map_location=torch.device(det_device)))
+                self.det_model.load_state_dict(torch.load(det_model_path, map_location=torch.device(det_device)))
                 self.det_model.to(det_device)
                 self.det_model.eval()
                 print("Detection model weights loaded.")
