@@ -57,18 +57,29 @@ def compression():
 
 def perspective():
     return A.Compose([
-        A.Perspective(scale=(0.1, 0.1), p=1)
+        A.Perspective(scale=(0.01, 0.01), p=1)
     ])
 
 
-def increase_image_size(image, increase_factor):
+def perspective_test():
+    return A.Compose([
+        A.Perspective(scale=(0.1, 0.2), p=1)
+    ])
+
+
+def increase_image_size(image, bboxes, increase_factor):
     w, h = image.size
     new_h, new_w = int(h * increase_factor), int(w * increase_factor)
-    top = (new_h - h) // 2
-    bottom = new_h - h - top
-    left = (new_w - w) // 2
-    right = new_w - w - left
-    return cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+    h_diff = (new_h - h) / 2
+    w_diff = (new_w - w) / 2
+    for bbox in bboxes:
+        bbox[0] += w_diff
+        bbox[1] += h_diff
+        bbox[2] += w_diff
+        bbox[3] += h_diff
+    updated_image = Image.new(image.mode, (new_w, new_h), 'white')
+    updated_image.paste(image, ((new_w - w) // 2, (new_h - h) // 2))
+    return updated_image, bboxes
 
 
 def scale_lower(image: Image, bboxes: list):
@@ -83,11 +94,11 @@ def scale_lower(image: Image, bboxes: list):
     return resized_image_np, scaled_bboxes
 
 
-def augment_trapezoid(image: Image, bboxes: list, labels: list):
-    increase_image_size(image, 1.5)
+def augment_test(image: Image, bboxes: list, labels: list):
+    image, bboxes = increase_image_size(image, bboxes, 2)
     num_img = np.array(image)
 
-    transform = A.Compose([perspective()],
+    transform = A.Compose([perspective_test()],
                           bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
     augmented = transform(image=num_img, bboxes=bboxes, labels=labels)
     bboxes = augmented['bboxes']

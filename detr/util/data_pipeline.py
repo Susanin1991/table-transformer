@@ -79,9 +79,9 @@ def create_augmented_detection_item_v2(resources_path, data_type_path, mode_path
         class_map = general_utils.get_class_map('structure')
 
     if extension == '.xml':
-        bboxes, labels = io_utils.read_pascal_voc(old_annotation_path, class_map)
+        bboxes, labels = io_utils.read_pascal_voc(str(old_annotation_path), class_map)
     else:
-        bboxes, labels = image_utils.read_createml_json_file(old_annotation_path, class_map)
+        bboxes, labels = image_utils.read_createml_json_file(str(old_annotation_path), class_map)
 
     t_bboxes = []
     t_labels = []
@@ -89,7 +89,7 @@ def create_augmented_detection_item_v2(resources_path, data_type_path, mode_path
         if labels[i] == 0 or labels[i] == 5 or labels[i] == 'table':
             t_bboxes.append(bboxes[i])
             t_labels.append(labels[i])
-    image, t_bboxes, t_labels = augmenter.augment(image, t_bboxes, t_labels)
+    image, t_bboxes, t_labels = augmenter.augment_test(image, t_bboxes, t_labels)
     image.save(new_img_path)
     if extension == '.xml':
         tree = io_utils.modify_and_save_xml(old_annotation_path, new_annotation_path, t_bboxes)

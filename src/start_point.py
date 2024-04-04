@@ -31,8 +31,7 @@ def visualize_test_cases(resources_path):
 
     for image_file in image_files:
         image_name, image_extension = image_file.split('.')
-
-        image_visualizator.image_visualize_json(resources_path, images_folder, image_name, image_extension)
+        image_visualizator.image_visualize(resources_path, images_folder, image_name, image_extension)
 
 
 def multiply_test_cases(resources_path, data_type_path, mode_path, images_folder):
@@ -52,8 +51,8 @@ def convert_xml_to_json(folder_path):
 
 
 if __name__ == "__main__":
-    multiply_test_cases(resources_path, structure_path, val_path, images_folder)
-    visualize_test_cases(resources_path + structure_path + val_path)
+    multiply_test_cases(resources_path, experiment_path, val_path, images_folder)
+    visualize_test_cases(resources_path + experiment_path + val_path)
     # convert_xml_to_json(resources_path_train)
     # util.data_pipeline.create_dataset_item_v3(resources_path_train)
     # util.annotation_utils.get_boxes_from_json(resources_path_val + "000020.json")
