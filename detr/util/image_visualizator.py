@@ -30,12 +30,10 @@ def image_visualize(resources_path, images_folder, image_name, image_extension):
     annotation_file = None
     files = os.listdir(annotation_file_path)
     for file in files:
-        if file.startswith(image_name):
-            annotation_file = file
-    if annotation_file.endswith(".json"):
-        image_visualize_json(resources_path, images_folder, image_name, image_extension)
-    else:
-        image_visualize_xml(resources_path, images_folder, image_name, image_extension)
+        if file == image_name + ".json":
+            image_visualize_json(resources_path, images_folder, image_name, image_extension)
+        if file == image_name + ".xml":
+            image_visualize_xml(resources_path, images_folder, image_name, image_extension)
 
 
 def image_visualize_json(resources_path, images_folder, image_name, image_extension):
@@ -48,8 +46,8 @@ def image_visualize_json(resources_path, images_folder, image_name, image_extens
     for bbox in bboxes:
         xmin = bbox[0]
         ymin = bbox[1]
-        xmax = bbox[0] + bbox[2]
-        ymax = bbox[1] + bbox[3]
+        xmax = bbox[2]
+        ymax = bbox[3]
         draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=3)
     image.show()
 
