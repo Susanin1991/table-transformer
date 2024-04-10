@@ -49,6 +49,10 @@ def noise():
     return A.GaussNoise(var_limit=(0, 50), p=0.2)
 
 
+def decrease_size():
+    return A.Resize(width=1000, height=2000)
+
+
 def compression():
     return A.ImageCompression(quality_lower=90,
                               quality_upper=99,
@@ -98,7 +102,7 @@ def augment_test(image: Image, bboxes: list, labels: list):
     image, bboxes = increase_image_size(image, bboxes, 2)
     num_img = np.array(image)
 
-    transform = A.Compose([perspective_test()],
+    transform = A.Compose([perspective_test(), decrease_size()],
                           bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
     augmented = transform(image=num_img, bboxes=bboxes, labels=labels)
     bboxes = augmented['bboxes']
