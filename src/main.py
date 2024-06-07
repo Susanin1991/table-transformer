@@ -20,7 +20,7 @@ import datasets.transforms as R
 
 import table_datasets as TD
 from table_datasets import PDFTablesDataset
-from eval import eval_coco
+from eval import eval_coco, eval_score
 
 
 def get_args():
@@ -368,7 +368,8 @@ def main():
         train(args, model, criterion, postprocessors, device)
     elif args.mode == "eval":
         data_loader_test, dataset_test = get_data(args)
-        eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
+        # eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
+        eval_score(args, model, criterion, postprocessors, data_loader_test, dataset_test, device)
 
 
 if __name__ == "__main__":

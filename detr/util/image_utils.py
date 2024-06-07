@@ -66,7 +66,7 @@ def draw_image_voc(image, items):
         ymin = obj['bbox'][1]
         xmax = obj['bbox'][2]
         ymax = obj['bbox'][3]
-        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=3)
+        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=7)
     image.show()
 
 
@@ -78,7 +78,7 @@ def draw_image_bboxes(image, bboxes):
         ymin = bbox[1]
         xmax = bbox[2]
         ymax = bbox[3]
-        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=3)
+        draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=7)
     image.show()
 
 

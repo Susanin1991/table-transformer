@@ -27,6 +27,7 @@ from datasets.coco_eval import CocoEvaluator
 import postprocess
 import grits
 from grits import grits_con, grits_top, grits_loc
+import image_visualizator
 
 
 structure_class_names = [
@@ -59,14 +60,14 @@ def objects_to_cells(bboxes, labels, scores, structure_class_names, structure_cl
     table_objects = []
     for bbox, score, label in zip(bboxes, scores, labels):
         table_objects.append({'bbox': bbox, 'score': score, 'label': label})
-        
-    table = {'objects': table_objects, 'page_num': 0} 
+
+    table = {'objects': table_objects, 'page_num': 0}
 
     # Determine the table cell structure from the objects
     table_structures, cells, confidence_score = postprocess.objects_to_cells(table, table_objects,
                                                                     structure_class_names,
                                                                     structure_class_thresholds)
-    
+
     return table_structures, cells, confidence_score
 
 
@@ -366,7 +367,7 @@ def get_bbox_decorations(data_type, label):
         if data_type == 'detection':
             return 'brown', 0.05, 3, '//'
         else:
-            return 'brown', 0, 3, None 
+            return 'brown', 0, 3, None
     elif label == 1:
         return 'red', 0.15, 2, None
     elif label == 2:
@@ -377,7 +378,7 @@ def get_bbox_decorations(data_type, label):
         return 'cyan', 0.2, 4, '//'
     elif label == 5:
         return 'green', 0.2, 4, '\\\\'
-    
+
     return 'gray', 0, 0, None
 
 
@@ -518,7 +519,7 @@ def visualize(args, target, pred_logits, pred_bboxes):
                                      linewidth=linewidth,
                                      edgecolor=color,facecolor='none',
                                      linestyle="--")
-            ax.add_patch(rect) 
+            ax.add_patch(rect)
 
     fig.set_size_inches((15, 15))
     plt.axis('off')
@@ -538,16 +539,16 @@ def visualize(args, target, pred_logits, pred_bboxes):
                 alpha = 0.3
             else:
                 alpha = 0.125
-            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1, 
+            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1,
                                     edgecolor='none',facecolor="magenta", alpha=alpha)
             ax.add_patch(rect)
-            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1, 
+            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1,
                                     edgecolor="magenta",facecolor='none',linestyle="--",
                                     alpha=0.08, hatch='///')
             ax.add_patch(rect)
-            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1, 
+            rect = patches.Rectangle(bbox[:2], bbox[2]-bbox[0], bbox[3]-bbox[1], linewidth=1,
                                     edgecolor="magenta",facecolor='none',linestyle="--")
-            ax.add_patch(rect) 
+            ax.add_patch(rect)
 
         fig.set_size_inches((15, 15))
         plt.axis('off')
@@ -659,6 +660,121 @@ def evaluate(args, model, criterion, postprocessors, data_loader, base_ds, devic
     return stats, coco_evaluator
 
 
+@torch.no_grad()
+def evaluate_score(args, model, criterion, postprocessors, data_loader, base_ds, device):
+    st_time = datetime.now()
+    model.eval()
+    criterion.eval()
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    header = 'Test:'
+    iou_types = tuple(k for k in ('segm', 'bbox') if k in postprocessors.keys())
+    coco_evaluator = CocoEvaluator(base_ds, iou_types)
+
+    if args.data_type == "structure":
+        tsr_metrics = []
+        pred_logits_collection = []
+        pred_bboxes_collection = []
+        targets_collection = []
+
+    num_batches = len(data_loader)
+    print_every = max(args.eval_step, int(math.ceil(num_batches / 100)))
+    batch_num = 0
+    actual = 0
+    true_positive = 0
+    false_positive = 0
+    for samples, targets in metric_logger.log_every(data_loader, print_every, header):
+        batch_num += 1
+        samples = samples.to(device)
+        for t in targets:
+            for k, v in t.items():
+                if not k == 'img_path':
+                    t[k] = v.to(device)
+
+        outputs = model(samples)
+
+        for target, pred_logits, pred_boxes in zip(targets, outputs['pred_logits'], outputs['pred_boxes']):
+            actual_to_add, true_positive_to_add, false_positive_to_add = evaluate_complex(args, target, pred_logits, pred_boxes)
+            actual += actual_to_add
+            true_positive += true_positive_to_add
+            false_positive += false_positive_to_add
+            # visualize(args, target, pred_logits, pred_boxes)
+
+        loss_dict = criterion(outputs, targets)
+        weight_dict = criterion.weight_dict
+
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = utils.reduce_dict(loss_dict)
+        loss_dict_reduced_scaled = {k: v * weight_dict[k]
+                                    for k, v in loss_dict_reduced.items() if k in weight_dict}
+        loss_dict_reduced_unscaled = {f'{k}_unscaled': v
+                                      for k, v in loss_dict_reduced.items()}
+        metric_logger.update(loss=sum(loss_dict_reduced_scaled.values()),
+                             **loss_dict_reduced_scaled,
+                             **loss_dict_reduced_unscaled)
+        metric_logger.update(class_error=loss_dict_reduced['class_error'])
+
+        orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
+        results = postprocessors['bbox'](outputs, orig_target_sizes)
+        res = {target['image_id'].item(): output for target, output in zip(targets, results)}
+        if coco_evaluator is not None:
+            coco_evaluator.update(res)
+
+        if args.data_type == "structure":
+            pred_logits_collection += list(outputs['pred_logits'].detach().cpu())
+            pred_bboxes_collection += list(outputs['pred_boxes'].detach().cpu())
+
+            for target in targets:
+                for k, v in target.items():
+                    if not k == 'img_path':
+                        target[k] = v.cpu()
+                target["img_words_path"] = ''
+            targets_collection += targets
+
+            if batch_num % args.eval_step == 0 or batch_num == num_batches:
+                pred_logits_collection = []
+                pred_bboxes_collection = []
+                targets_collection = []
+
+    false_negative = actual - true_positive
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    if coco_evaluator is not None:
+        coco_evaluator.synchronize_between_processes()
+
+    # accumulate predictions from all images
+    if coco_evaluator is not None:
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+    stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+    if coco_evaluator is not None:
+        if 'bbox' in postprocessors.keys():
+            stats['coco_eval_bbox'] = coco_evaluator.coco_eval['bbox'].stats.tolist()
+
+    if args.data_type == "structure":
+        # Save sample-level metrics for more analysis
+        if len(args.metrics_save_filepath) > 0:
+            with open(args.metrics_save_filepath, 'w') as outfile:
+                json.dump(tsr_metrics, outfile)
+
+        # Compute metrics averaged over all samples
+        metrics_summary = compute_metrics_summary(tsr_metrics, args.mode)
+
+        # Print summary of metrics
+        print_metrics_summary(metrics_summary)
+
+    print("Total time taken for {} samples: {}".format(len(base_ds), datetime.now() - st_time))
+    accuracy = true_positive / actual
+    precision = true_positive / (true_positive + false_positive)
+    recall = true_positive / (true_positive + false_negative)
+    f1 = 2 * precision * recall / (precision + recall)
+    print(f"Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}")
+
+    return stats, coco_evaluator
+
+
 def eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_test, device):
     """
     Use this function to do COCO evaluation. Default implementation runs it on
@@ -670,3 +786,76 @@ def eval_coco(args, model, criterion, postprocessors, data_loader_test, dataset_
     print("COCO metrics summary: AP50: {:.3f}, AP75: {:.3f}, AP: {:.3f}, AR: {:.3f}".format(
         pubmed_stats['coco_eval_bbox'][1], pubmed_stats['coco_eval_bbox'][2],
         pubmed_stats['coco_eval_bbox'][0], pubmed_stats['coco_eval_bbox'][8]))
+
+
+def eval_score(args, model, criterion, postprocessors, data_loader_test, dataset_test, device):
+    """
+    Use this function to do Accuracy, Precision, Recall and F1 Score evaluations.
+    """
+    pubmed_stats, evaluator = evaluate_score(args, model, criterion, postprocessors,
+                                            data_loader_test, dataset_test,
+                                            device)
+    print("COCO metrics summary: AP50: {:.3f}, AP75: {:.3f}, AP: {:.3f}, AR: {:.3f}".format(
+        pubmed_stats['coco_eval_bbox'][1], pubmed_stats['coco_eval_bbox'][2],
+        pubmed_stats['coco_eval_bbox'][0], pubmed_stats['coco_eval_bbox'][8]))
+
+def evaluate_complex(args, target, pred_logits, pred_boxes):
+    img_filepath = target["img_path"]
+    annotaition_address = image_visualizator.get_annotation_path(img_filepath)
+    bboxes, labels = image_visualizator.get_bboxes_from_annotation(annotaition_address)
+    img = Image.open(img_filepath)
+    img_size = img.size
+
+    m = pred_logits.softmax(-1).max(-1)
+    pred_labels = list(m.indices.detach().cpu().numpy())
+    pred_scores = list(m.values.detach().cpu().numpy())
+    pred_bboxes_all = pred_boxes.detach().cpu()
+    pred_bboxes_all = [elem.tolist() for elem in rescale_bboxes(pred_bboxes_all, img_size)]
+    pred_bboxes_filtered = []
+
+    for bbox, label, score in zip(pred_bboxes_all, pred_labels, pred_scores):
+        if (args.data_type == 'structure' and not label > 5) or (args.data_type == 'detection' and not label > 1):
+            pred_bboxes_filtered.append(bbox)
+
+    image_visualizator.image_visualize(img_filepath, bboxes, pred_bboxes_filtered)
+    matching_pairs, actual, true_positive, false_positive = find_matching_pairs(bboxes, pred_bboxes_filtered, 0.9)
+    return actual, true_positive, false_positive
+
+def calculate_area(bbox):
+    xmin, ymin, xmax, ymax = bbox
+    return (xmax - xmin) * (ymax - ymin)
+
+def find_matching_pairs(bboxes1, bboxes2, threshold=0.9):
+    matching_pairs = []
+    actual = len(bboxes1)
+    true_positive = 0
+    false_positive = 0
+    for bbox1 in bboxes1:
+
+
+        for bbox2 in bboxes2:
+            area1 = calculate_area(bbox1)
+            area2 = calculate_area(bbox2)
+            intersection_area = calculate_intersection_area(bbox1, bbox2)
+            if intersection_area / min(area1, area2) >= threshold:
+                matching_pairs.append((bbox1, bbox2))
+                true_positive += 1
+                # bboxes1.remove(bbox1)
+                # bboxes2.remove(bbox2)
+                break
+    false_positive = len(bboxes2) - true_positive
+    return matching_pairs, actual, true_positive, false_positive
+
+def calculate_intersection_area(bbox1, bbox2):
+    xmin1, ymin1, xmax1, ymax1 = bbox1
+    xmin2, ymin2, xmax2, ymax2 = bbox2
+    x_overlap = max(0, min(xmax1, xmax2) - max(xmin1, xmin2))
+    y_overlap = max(0, min(ymax1, ymax2) - max(ymin1, ymin2))
+    return x_overlap * y_overlap
+
+    # # Пример использования:
+    # bboxes1 = [(100, 200, 140, 300), (200, 300, 250, 350)]
+    # bboxes2 = [(90, 198, 150, 310), (210, 310, 260, 360)]
+    #
+    # matching_pairs = find_matching_pairs(bboxes1, bboxes2)
+    # print("Сопоставленные пары прямоугольников:", matching_pairs)

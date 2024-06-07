@@ -20,7 +20,7 @@ PADDING = 10
 
 
 det_config_path = os.path.abspath('../../src/structure_config.json')
-det_model_path = os.path.abspath('../../resources/detection/output/model_20.pth')
+det_model_path = os.path.abspath('../../resources/detection/output/model_2.pth')
 str_config_path = os.path.abspath('../../src/structure_config.json')
 str_model_path = os.path.abspath('../../resources/structure/output/model_20.pth')
 det_model_path_base = os.path.abspath('../../resources/detection/output/base.pth')
@@ -47,10 +47,10 @@ def draw_image_with_bbox(image, bboxes, color):
 
 
 pipe = inference.TableExtractionPipeline(det_config_path=det_config_path,
-                                         det_model_path=det_model_path_base,
+                                         det_model_path=det_model_path,
                                          det_device='cuda',
                                          str_config_path=str_config_path,
-                                         str_model_path=str_model_path_base,
+                                         str_model_path=str_model_path,
                                          str_device='cuda')
 
 
