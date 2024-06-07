@@ -817,7 +817,7 @@ def evaluate_complex(args, target, pred_logits, pred_boxes):
         if (args.data_type == 'structure' and not label > 5) or (args.data_type == 'detection' and not label > 1):
             pred_bboxes_filtered.append(bbox)
 
-    image_visualizator.image_visualize(img_filepath, bboxes, pred_bboxes_filtered)
+    image_visualizator.image_visualize(args, img_filepath, bboxes, pred_bboxes_filtered)
     matching_pairs, actual, true_positive, false_positive = find_matching_pairs(bboxes, pred_bboxes_filtered, 0.9)
     return actual, true_positive, false_positive
 

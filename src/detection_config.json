@@ -41,6 +41,8 @@
     "device":"cuda",
     "seed":42,
     "start_epoch":0,
-    "num_workers":1
+    "num_workers":1,
+
+    "save_images_path":"D:\\Work\\table-transformer\\resources\\detection\\output\\images\\"
 }
 

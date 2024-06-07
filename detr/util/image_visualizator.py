@@ -76,7 +76,7 @@ def image_visualize_old(resources_path, images_folder, image_name, image_extensi
             image_visualize_xml(resources_path, images_folder, image_name, image_extension)
 
 
-def image_visualize(image_path, bboxes, bboxes_modeled):
+def image_visualize(args, image_path, bboxes, bboxes_modeled):
     image = Image.open(image_path)
     draw = ImageDraw.Draw(image)
 
@@ -94,5 +94,6 @@ def image_visualize(image_path, bboxes, bboxes_modeled):
         ymax = box[3]
         draw.rectangle([xmin, ymin, xmax, ymax], outline='red', width=8)
 
-    image.show()
+    # image.show()
+    image.save(args.save_images_path + image_path.split("\\")[-1])
 
